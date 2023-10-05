@@ -1,0 +1,21 @@
+---
+title: "MoodMapper"
+author: "Richa Jain"
+format: html
+---
+```{r}
+library(dplyr)
+library(tidyverse)
+library(readr)
+```
+
+
+```{r}
+mood_data <- read.table("data/val.txt", sep = ";", header = FALSE)
+colnames(mood_data) <- c("Description", "Mood")
+mood_data
+```
+```{r}
+unique(mood_data$Mood)
+```
+
