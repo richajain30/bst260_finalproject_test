@@ -7,15 +7,75 @@ format: html
 library(dplyr)
 library(tidyverse)
 library(readr)
+library(tidytext)
 ```
 
+Resource used: https://bookdown.org/valerie_hase/TextasData_HS2021/tutorial-11-preprocessing.html
+
+## Read in dataset
 
 ```{r}
 mood_data <- read.table("data/val.txt", sep = ";", header = FALSE)
 colnames(mood_data) <- c("Description", "Mood")
 mood_data
 ```
+
+## Text Preprocessing
+
+1. Check for encoding issues: 
 ```{r}
-unique(mood_data$Mood)
+mood_data$Description[1]
 ```
+```{r}
+writeLines(mood_data$Description[1])
+```
+
+- reading the text seems to have worked without any encoding issues. 
+
+2. Tokenization:
+- remove numbers, punctuation marks, urls
+- remove features that provide little informational value
+- convert all text to lowercase in case not already lowercase
+```{r}
+library(quanteda)
+tokens <- tokens(mood_data$Description, what = "word",
+                 remove_punct = TRUE,
+                 remove_numbers = TRUE,
+                 remove_url = TRUE)
+tokens <- tokens_tolower(tokens)
+```
+
+3. Remove stopwords
+- tidytext has a database of commonly used stop words
+```{r}
+stop_words
+```
+
+```{r}
+tokens <- tokens_remove(tokens, stopwords("english"))
+tokens <- tokens_wordstem(tokens)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
