@@ -1,0 +1,83 @@
+---
+title: "MoodMapper_2"
+format: html
+---
+
+```{r}
+library(dplyr)
+library(tidyverse)
+library(readr)
+library(tidytext)
+library(quanteda)
+library(tm)
+```
+
+```{r}
+mood_data <- read.table("data/val.txt", sep = ";", header = FALSE)
+colnames(mood_data) <- c("Description", "Mood")
+#mood_data <- head(mood_data, 5)
+```
+
+```{r}
+unique(mood_data$Mood)
+```
+
+
+```{r}
+mapping <- c("joy" = 0, "sadness" = 1, "anger" = 2, "love" = 3, "fear" = 4, "surprise" = 5)
+mood_data$label <- match(mood_data$Mood, names(mapping))
+head(mood_data)
+```
+
+```{r}
+processing <- function(text){
+  tokens_mood <- tokens(text, what = "word",
+                 remove_punct = TRUE,
+                 remove_numbers = TRUE,
+                 remove_url = TRUE)
+  tokens_mood <- tokens_tolower(tokens_mood)
+  
+  english_stopwords <- stopwords("english")
+  english_stopwords <- c(english_stopwords, "feel")
+  exclude <- c("not", "nothing", "no", "never")
+  custom_stopwords <- setdiff(english_stopwords, exclude)
+  tokens_mood<- tokens_remove(tokens_mood, custom_stopwords)
+  tokens_mood <- tokens_wordstem(tokens_mood)
+  tokens_mood
+  #print(tokens_mood)
+  
+  combined_tokens <- paste(unlist(tokens_mood), collapse = " ")
+  #print(combined_tokens)
+  
+  return(combined_tokens)
+}
+```
+
+```{r}
+mood_data$processed <- sapply(mood_data$Description, processing)
+mood_data
+```
+
+Bag of Words
+```{r}
+corpus <- Corpus(VectorSource(mood_data$Mood))
+dtm_mood <- DocumentTermMatrix(corpus)
+mood_matrix <- as.data.frame(as.matrix(dtm_mood))
+mood_matrix
+```
+
+```{r}
+library(randomForest)
+library(caret)
+```
+```{r}
+model_formula <- mood ~ .
+model_formula
+```
+
+
+
+
+
+
+

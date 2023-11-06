@@ -18,16 +18,21 @@ Resource used: https://bookdown.org/valerie_hase/TextasData_HS2021/tutorial-11-p
 mood_data <- read.table("data/val.txt", sep = ";", header = FALSE)
 colnames(mood_data) <- c("Description", "Mood")
 mood_data
+
+#train_data <- read.table("data/train.txt", sep = ";", header = FALSE)
+#colnames(train_data) <- c("Description", "Mood")
+#head(train_data)
+
+#test_data <- read.table("data/test.txt", sep = ";", header = FALSE)
+#colnames(test_data) <- c("Description", "Mood")
+#head(test_data)
 ```
 
 ## Text Preprocessing
 
 1. Check for encoding issues: 
 ```{r}
-mood_data$Description[1]
-```
-```{r}
-writeLines(mood_data$Description[1])
+#mood_data$Description[1]
 ```
 
 - reading the text seems to have worked without any encoding issues. 
@@ -36,33 +41,132 @@ writeLines(mood_data$Description[1])
 - remove numbers, punctuation marks, urls
 - remove features that provide little informational value
 - convert all text to lowercase in case not already lowercase
+
+```{r}
+mood_data$sadness_binary <- ifelse(mood_data$Mood == "sadness", 1, 0)
+mood_data$love_binary <- ifelse(mood_data$Mood == "love", 1, 0)
+mood_data$anger_binary <- ifelse(mood_data$Mood == "anger", 1, 0)
+mood_data$joy_binary <- ifelse(mood_data$Mood == "joy", 1, 0)
+mood_data$fear_binary <- ifelse(mood_data$Mood == "fear", 1, 0)
+mood_data$surprise_binary <- ifelse(mood_data$Mood == "surprise", 1, 0)
+mood_data
+```
+
+
+```{r}
+library(tm)
+corpus <- Corpus(VectorSource(mood_data$Mood))
+corpus
+corpus <- tm_map(corpus, content_transformer(tolower))
+corpus <- tm_map(corpus, removePunctuation)
+corpus <- tm_map(corpus, removeNumbers)
+corpus <- tm_map(corpus, removeWords, stopwords("english"))
+dtm <- DocumentTermMatrix(corpus)
+feeling_matrix <- as.data.frame(as.matrix(dtm))
+feeling_matrix
+```
+
+```{r}
+colnames(feeling_matrix) <- paste0("word_", colnames(feeling_matrix))
+feeling_matrix
+combined_data <- cbind(mood_data, feeling_matrix)
+combined_data
+```
+
+```{r}
+set.seed(123)
+
+train_indices <- sample(1:nrow(combined_data), 0.7 * nrow(combined_data))
+train_data <- combined_data[train_indices, ]
+test_data <- combined_data[-train_indices, ]
+
+# Build the linear regression model
+model <- glm(sadness_binary ~ ., family = binomial(link = "logit"), data = train_data)
+
+predictions <- predict(model, newdata = test_data, type = "response")
+```
+
+
 ```{r}
 library(quanteda)
-tokens <- tokens(mood_data$Description, what = "word",
+tokens_mood <- tokens(mood_data$Description, what = "word",
                  remove_punct = TRUE,
                  remove_numbers = TRUE,
                  remove_url = TRUE)
-tokens <- tokens_tolower(tokens)
+tokens_mood <- tokens_tolower(tokens_mood)
+dtm_mood <- DocumentTermMatrix(tokens_mood)
+text_features_mood <- as.data.frame(as.matrix(dtm_mood))
+text_features_mood
+text_features_mood$Mood <- mood_data$Mood
+text_features_mood
+tokens_mood
+
+tokens_train <- tokens(train_data$Description, what = "word",
+                 remove_punct = TRUE,
+                 remove_numbers = TRUE,
+                 remove_url = TRUE)
+tokens_train <- tokens_tolower(tokens_train)
+#tokens_train
+
+tokens_test <- tokens(test_data$Description, what = "word",
+                 remove_punct = TRUE,
+                 remove_numbers = TRUE,
+                 remove_url = TRUE)
+tokens_test <- tokens_tolower(tokens_test)
+#tokens_test
 ```
 
 3. Remove stopwords
 - tidytext has a database of commonly used stop words
+- don't get rid of the not, no, nothing 
+
 ```{r}
-stop_words
+english_stopwords <- stopwords("english")
+exclude <- c("not", "nothing", "no", "never")
+custom_stopwords <- setdiff(english_stopwords, exclude)
+tokens_mood<- tokens_remove(tokens_mood, custom_stopwords)
+tokens_mood <- tokens_wordstem(tokens_mood)
+
+tokens_train <- tokens_remove(tokens_train, custom_stopwords)
+tokens_train <- tokens_wordstem(tokens_train)
+
+tokens_test <- tokens_remove(tokens_test, custom_stopwords)
+tokens_test <- tokens_wordstem(tokens_test)
+```
+
+## Regression Attempt 
+
+```{r}
+#unique(test_data$Mood)
+```
+
+1. Preprocess data to create binary columns for each emotion
+
+```{r}
+emotions <- c("sadness", "anger", "love", "surprise", "fear", "joy")
+for(emotion in emotions){
+  train_data[[emotion]] <- as.integer(train_data$Mood == emotion)
+}
+
+for(emotion in emotions){
+  test_data[[emotion]] <- as.integer(test_data$Mood == emotion)
+}
+head(train_data)
+head(test_data)
+```
+
+2. Train binary classification
+
+```{r}
+train_data <- head(train_data, 1000)
+test_data <- head(test_data, 1000)
+model_sad <- glm(sadness ~ ., data = train_data, family = binomial, control = glm.control(maxit=1000))
 ```
 
 ```{r}
-tokens <- tokens_remove(tokens, stopwords("english"))
-tokens <- tokens_wordstem(tokens)
+predictions_sad <- predict(model_sad, newdata = test_data, type = "response")
+predicted_labels_sad <- ifelse(predictions_sad > 0.5, 1, 0)
 ```
-
-
-
-
-
-
-
-
 
 
 
