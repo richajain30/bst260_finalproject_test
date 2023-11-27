@@ -10,22 +10,26 @@ library(readr)
 library(tidytext)
 library(quanteda)
 library(tm)
+library(randomForest)
+library(caret)
 ```
 
 ```{r}
-mood_data <- read.table("data/val.txt", sep = ";", header = FALSE)
+mood_data <- read.table("data/train.txt", sep = ";", header = FALSE)
 colnames(mood_data) <- c("Description", "Mood")
-#mood_data <- head(mood_data, 5)
+#mood_data <- head(mood_data, 5000)
 ```
 
 ```{r}
-unique(mood_data$Mood)
+table(mood_data$Mood)
 ```
 
 
 ```{r}
-mapping <- c("joy" = 0, "sadness" = 1, "anger" = 2, "love" = 3, "fear" = 4, "surprise" = 5)
-mood_data$label <- match(mood_data$Mood, names(mapping))
+#mapping <- c("joy" = 0, "sadness" = 1, "anger" = 2, "love" = 3, "fear" = 4, "surprise" = 5)
+#mood_data$label <- match(mood_data$Mood, names(mapping))
+#head(mood_data)
+mood_data$label <- c(0, 1, 2, 3, 4, 5)[match(mood_data$Mood, c('joy', 'sadness', 'anger', 'fear', 'love', 'surprise'))]
 head(mood_data)
 ```
 
@@ -42,12 +46,10 @@ processing <- function(text){
   exclude <- c("not", "nothing", "no", "never")
   custom_stopwords <- setdiff(english_stopwords, exclude)
   tokens_mood<- tokens_remove(tokens_mood, custom_stopwords)
-  tokens_mood <- tokens_wordstem(tokens_mood)
+  #tokens_mood <- tokens_wordstem(tokens_mood)
   tokens_mood
-  #print(tokens_mood)
   
   combined_tokens <- paste(unlist(tokens_mood), collapse = " ")
-  #print(combined_tokens)
   
   return(combined_tokens)
 }
@@ -58,26 +60,58 @@ mood_data$processed <- sapply(mood_data$Description, processing)
 mood_data
 ```
 
+
 Bag of Words
 ```{r}
-corpus <- Corpus(VectorSource(mood_data$Mood))
+corpus <- Corpus(VectorSource(mood_data$processed))
 dtm_mood <- DocumentTermMatrix(corpus)
 mood_matrix <- as.data.frame(as.matrix(dtm_mood))
+mood_matrix <- cbind(mood_data, mood_matrix)
+mood_matrix$label <- as.factor(mood_matrix$label)
 mood_matrix
 ```
 
 ```{r}
-library(randomForest)
 library(caret)
+
+set.seed(2022) # Setting a seed for reproducibility
+train_size <- round(0.6*nrow(mood_matrix))
+train_index <- sample(1:nrow(mood_matrix), train_size)
+train_data <- mood_matrix[train_index, ]
+test_data <- mood_matrix[-train_index, ]
+train_data
+y_train_data <- train_data[,3]
+y_train_data
 ```
+
 ```{r}
-model_formula <- mood ~ .
-model_formula
+test_data
 ```
 
 
+```{r}
+model <- randomForest(train_data, y = y_train_data, ntree = 5)
+#test_data$label <- factor(test_data$label, levels = levels(y_tra))
+model
+preds <- predict(model, test_data)
+preds
+```
+
+```{r}
+true_values <- test_data[,3]
+conf_matrix <- confusionMatrix(preds, true_values)
+conf_matrix
+```
 
 
+```{r}
+rf_model <- randomForest(label ~ ., data = train_data)
+```
 
+```{r}
+y_pred <- predict(rf_model, newdata = test_data)
+y_pred
+test_data
+```
 
 

@@ -157,6 +157,17 @@ head(test_data)
 
 2. Train binary classification
 
+- take a sample of the dataset
+- filter out words too much
+
+1. get rid of stop words
+2. keep words that appear a lot
+
+- PCA 
+- Random Forest
+- make sure you just split up the words 
+- sentence, outcome, 0/1 for every single word that appears in entire dataset
+
 ```{r}
 train_data <- head(train_data, 1000)
 test_data <- head(test_data, 1000)

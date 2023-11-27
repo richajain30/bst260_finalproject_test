@@ -1,0 +1,210 @@
+---
+title: "MoodMapper_Final"
+author: "Richa Jain"
+format: html
+execute:
+  echo: false
+output:
+  quarto::quarto_document:
+    warnings: false
+---
+
+## ABSTRACT
+
+The aim of this project is to use term frequency-inverse document frequency (TF-IDF) and a random forest model to predict the sentiment of documents. This project uses a dataset found on Kaggle that includes a column 'Description' and a column 'Mood.' TF-IDF and random forest are used to train a model that will be able to use the description to predict the mood. The goal is to see how accurate this method is in predicting the same mood as in the actual dataset. This process ultimately revealed approximately a 45% accuracy, so TF-IDF and random forest may not be the best approach in predicting mood for the given descriptions. 
+
+## DATA
+
+Link to dataset: [https://www.kaggle.com/datasets/praveengovi/emotions-dataset-for-nlp/data](Emotions Dataset Kaggle)
+The dataset includes a column for 'Description' and a column for 'Mood.' Kaggle also includes a train.txt file for training the model and a test.txt file for testing the model. Kaggle describes the data as a collection of documents and its associated emotions. 
+
+## INTRODUCTION
+
+The goal of this project is to determine the emotion of an individual based on a short description. In the dataset, descriptions are of varying lengths and the associated emotion is one of the following: sadness, anger, love, surprise, fear, or joy. 
+
+To do this prediction, I used term frequency-inverse document frequency (TF-IDF) and a random forest model. TF-IDF is a common natural language processing method that determines the importance of words or phrases in a document. In machine learning, this 'document' is called a corpus. The term frequency part looks at the frequency of terms. For this project, I determined the number of times a specific words appeared in the document. The inverse document frequency part determines how common each word is in the corpus.  
+
+A random forest model is a common machine learning algorithm. It is made up of multiple decision trees that can be used for classification in order to determine what group our observation belongs to. For the purpose of this project, we use random forest to determine what mood/emotion our description belongs to. The random forest algorithm grows multiple trees that are ultimately merged to get a final prediction value. 
+
+
+## METHODS
+
+- code and descriptions
+- Originally tried to use the built in randomForest model, but when I ran that it took over a whole day to run since this project involves term frequency-inverse document frequency (TF-IDF). 
+- Ultimately, I learned about the ranger library. This package is used to build random forests. The reason this one works better is because it uses parallel processing to increase the training speed. 
+
+## EVALUATION
+
+- code and descriptions
+
+## RESULTS AND CONCLUSION
+
+- code and descriptions
+
+## Load libraries
+
+```{r}
+library(tm)
+library(randomForest)
+library(ranger)
+```
+
+
+## Read in data and adjust 
+
+```{r}
+mood_data <- read.table("data/train.txt", sep = ";", header = FALSE)
+colnames(mood_data) <- c("Description", "Mood")
+mood_data$label <- c(1, 2, 3, 4, 5, 6)[match(mood_data$Mood, c('sadness', 'anger', 'love', 'surprise', 'fear', 'joy'))]
+head(mood_data)
+```
+
+
+## Preprocessing
+- Wanted all the descriptions to be lowercase. 
+```{r}
+mood_data$Description <- tolower(mood_data$Description)
+```
+
+
+## Create TF-IDF
+- Term frequency-inverse document frequency (TF-IDF) is used to measure the importance of words in a document. This goes through all the words that are seen in the Description column and creates a whole column for each and every word. It then gives a 1 or 0 for whether that word occurs in the Description for that row or not, respectively. 
+```{r}
+corpus <- Corpus(VectorSource(mood_data$Description))
+corpus <- tm_map(corpus, content_transformer(tolower))
+corpus <- tm_map(corpus, removePunctuation)
+corpus <- tm_map(corpus, removeNumbers)
+corpus <- tm_map(corpus, removeWords, stopwords("en"))
+dtm <- DocumentTermMatrix(corpus)
+```
+
+
+## Convert to df and add in predictor variable
+
+```{r}
+tfidf_df <- as.data.frame(as.matrix(dtm))
+tfidf_df$label <- as.factor(mood_data$label)
+colnames(tfidf_df) <- paste(colnames(tfidf_df), "_c", sep = "")
+```
+
+
+## Train Random Forest model for multiple trees
+# takes 20 minutes to run
+default is 500
+## NOTE TO SELF: talk about the issues with regular random forest (too slow, but this is parallelized)
+```{r}
+ntree <- seq(10, 150, by = 10)
+oob_predictions <- vector("numeric", length(ntree))
+set.seed(1)
+for(i in 1:length(nt)){
+  rf_model <- ranger::ranger(label_c ~ ., data = tfidf_df, num.trees = nt[i])
+  oob_predictions[i] <- rf_model$prediction.error
+  print(i)
+}
+```
+
+
+## Plot accuracy
+
+```{r}
+oob_predictions <- 1 - oob_predictions # gives us the accuracy. 
+max(oob_predictions)
+plot(x = ntree, y = oob_predictions, col = "red", type = "l")
+```
+
+
+## Train Random Forest model for best ntree
+# ntree = 150
+```{r}
+set.seed(1)
+rf_model <- ranger::ranger(label_c ~ ., data = tfidf_df, num.trees = 150)
+```
+
+
+## Generate predictions
+- generates multiple predictions, taking most occurring one for the final prediction
+
+```{r}
+test_data <- read.table("data/test.txt", sep = ";", header = FALSE)
+colnames(test_data) <- c("Description", "Mood")
+test_data$label <- c(1, 2, 3, 4, 5, 6)[match(test_data$Mood, c('sadness', 'anger', 'love', 'surprise', 'fear', 'joy'))]
+#test_data <- head(test_data, 1)
+```
+- takes 8.5 minutes to run
+```{r}
+final_predictions = c()
+set.seed(1)
+for(description in test_data$Description){
+  #print(description)
+  new_text <- tolower(description)
+  new_text <- removePunctuation(new_text)
+  new_text <- removeNumbers(new_text)
+  new_text <- removeWords(new_text, stopwords("en"))
+  new_text_tfidf <- DocumentTermMatrix(
+    Corpus(VectorSource(new_text)),
+    control = list(dictionary = Terms(dtm))
+    )
+  new_text_tfidf <- as.data.frame(as.matrix((new_text_tfidf)))
+  colnames(new_text_tfidf) <- paste(colnames(new_text_tfidf), "_c", sep = "")
+  predicted_mood <- predict(rf_model, data = new_text_tfidf, type = "response", predict.all=TRUE)$predictions
+  predicted_mood <- table(as.matrix(predicted_mood))
+  #print(predicted_mood)
+  most_occuring_value <- which.max(predicted_mood)
+  #print(most_occuring_value)
+  final_predictions <- append(final_predictions, most_occuring_value)
+}
+```
+
+```{r}
+test_data$predictions <- final_predictions
+test_data$predictions <- as.factor(test_data$predictions)
+test_data$label <- as.factor(test_data$label)
+test_data
+```
+
+## Check model accuracy
+
+```{r}
+library(caret)
+conf_matrix <- confusionMatrix(test_data$predictions, test_data$label)
+conf_matrix
+```
+
+## EDA 
+- could explain why accurate for 1 and 6
+```{r}
+hist(mood_data$label)
+test_data_eda <- read.table("data/test.txt", sep = ";", header = FALSE)
+colnames(test_data_eda) <- c("Description", "Mood")
+test_data_eda$label <- c(1, 2, 3, 4, 5, 6)[match(test_data_eda$Mood, c('sadness', 'anger', 'love', 'surprise', 'fear', 'joy'))]
+hist(test_data_eda$label)
+```
+
+
+## Cross Validation
+- already done with separate datasets for training and testing the model. 
+
+
+## LDA?? Regression?? 
+
+```{r}
+lm_model <- lm(label_c ~ ., data = tfidf_df)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

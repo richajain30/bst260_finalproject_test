@@ -1,0 +1,62 @@
+---
+title: "MoodMapper_RJ"
+format: html
+---
+
+```{r}
+library(tm)
+library(randomForest)
+library(tidyverse)
+```
+
+## Step 1: Read in data, create dataframes
+
+```{r}
+mood_data <- read.table("data/train.txt", sep = ";", header = FALSE)
+colnames(mood_data) <- c("Description", "Mood")
+head(mood_data)
+```
+
+## Step 2: Clean words, vectorization, TF-IDF, lowercase, etc. 
+## Step 3: Combine with mood labels
+
+```{r}
+mood_data$Description <- tolower(mood_data$Description)
+```
+
+```{r}
+corpus <- Corpus(VectorSource(mood_data$Description))
+corpus <- tm_map(corpus, content_transformer(tolower))
+corpus <- tm_map(corpus, removePunctuation)
+corpus <- tm_map(corpus, removeNumbers)
+corpus <- tm_map(corpus, removeWords, stopwords("en"))
+dtm <- DocumentTermMatrix(corpus)
+```
+
+```{r}
+tf_idf <- as.data.frame(as.matrix(dtm))
+remove_else <- "else"
+tf_idf <- tf_idf %>% select(-remove_else)
+tf_idf$Mood <- as.factor(mood_data$Mood)
+```
+
+```{r}
+colnames(tf_idf) <- paste(colnames(tf_idf), "_c", sep = "")
+```
+
+
+## Step 4: Random Forest Model
+
+```{r}
+rf_model <- randomForest(Mood_c ~ ., data = tf_idf)
+```
+
+```{r}
+unique(tf_idf['break'])
+mood_data[72,]
+```
+
+
+## Step 5: Example predictions / use model on the test dataset
+
+## Step 6: Cross Validation 
