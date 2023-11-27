@@ -31,15 +31,7 @@ A random forest model is a common machine learning algorithm. It is made up of m
 
 - code and descriptions
 - Originally tried to use the built in randomForest model, but when I ran that it took over a whole day to run since this project involves term frequency-inverse document frequency (TF-IDF). 
-- Ultimately, I learned about the ranger library. This package is used to build random forests. The reason this one works better is because it uses parallel processing to increase the training speed. 
-
-## EVALUATION
-
-- code and descriptions
-
-## RESULTS AND CONCLUSION
-
-- code and descriptions
+- Ultimately, I learned about the ranger library. This package is used to build random forests. The reason this one works better is because it uses parallel processing to increase the training speed.
 
 ## Load libraries
 
@@ -161,6 +153,10 @@ test_data$predictions <- as.factor(test_data$predictions)
 test_data$label <- as.factor(test_data$label)
 test_data
 ```
+
+## EVALUATION, RESULTS, and CONCLUSION
+
+- code and descriptions
 
 ## Check model accuracy
 
