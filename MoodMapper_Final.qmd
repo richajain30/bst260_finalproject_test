@@ -1,5 +1,5 @@
 ---
-title: "MoodMapper_Final"
+#title: "MoodMapper_Final"
 author: "Richa Jain"
 format: html
 execute:
@@ -7,33 +7,92 @@ execute:
 output:
   quarto::quarto_document:
     warnings: false
+editor: 
+  markdown: 
+    wrap: 72
 ---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+```
+
+# Mood Mapper
 
 ## ABSTRACT
 
-The aim of this project is to use term frequency-inverse document frequency (TF-IDF) and a random forest model to predict the sentiment of documents. This project uses a dataset found on Kaggle that includes a column 'Description' and a column 'Mood.' TF-IDF and random forest are used to train a model that will be able to use the description to predict the mood. The goal is to see how accurate this method is in predicting the same mood as in the actual dataset. This process ultimately revealed approximately a 45% accuracy, so TF-IDF and random forest may not be the best approach in predicting mood for the given descriptions. 
-
-## DATA
-
-Link to dataset: [https://www.kaggle.com/datasets/praveengovi/emotions-dataset-for-nlp/data](Emotions Dataset Kaggle)
-The dataset includes a column for 'Description' and a column for 'Mood.' Kaggle also includes a train.txt file for training the model and a test.txt file for testing the model. Kaggle describes the data as a collection of documents and its associated emotions. 
+The aim of this project is to use term frequency-inverse document
+frequency (TF-IDF) and a random forest model to predict the sentiment of
+documents. This project uses a dataset found on Kaggle that includes a
+column 'Description' and a column 'Mood.' TF-IDF and random forest are
+used to train a model that will be able to use the description to
+predict the mood. The goal is to see how accurate this method is in
+predicting the same mood as in the actual dataset. This process
+ultimately revealed approximately a 45% accuracy, so TF-IDF and random
+forest may not be the best approach in predicting mood for the given
+descriptions.
 
 ## INTRODUCTION
 
-The goal of this project is to determine the emotion of an individual based on a short description. In the dataset, descriptions are of varying lengths and the associated emotion is one of the following: sadness, anger, love, surprise, fear, or joy. 
+The goal of this project is to determine the emotion of an individual
+based on a short description. In the dataset, descriptions are of
+varying lengths and the associated emotion is one of the following:
+sadness, anger, love, surprise, fear, or joy.
 
-To do this prediction, I used term frequency-inverse document frequency (TF-IDF) and a random forest model. TF-IDF is a common natural language processing method that determines the importance of words or phrases in a document. In machine learning, this 'document' is called a corpus. The term frequency part looks at the frequency of terms. For this project, I determined the number of times a specific words appeared in the document. The inverse document frequency part determines how common each word is in the corpus.  
+The approach taken to generate these predictions was term frequency-inverse document frequency
+(TF-IDF) and random forest modeling. TF-IDF is a common natural language
+processing method that determines the importance of words or phrases in
+a document. In machine learning, this 'document' is called a corpus. The
+term frequency part looks at the frequency of terms. It is used to
+determine the number of times a specific words appears in the
+document. The inverse document frequency part determines how common each
+word is in the corpus.
 
-A random forest model is a common machine learning algorithm. It is made up of multiple decision trees that can be used for classification in order to determine what group our observation belongs to. For the purpose of this project, we use random forest to determine what mood/emotion our description belongs to. The random forest algorithm grows multiple trees that are ultimately merged to get a final prediction value. 
+Term frequency-inverse document frequency (TF-IDF) is used to measure
+the importance of words in a document. This goes through all the words
+that are seen in the Description column and creates a whole column for
+each and every word. It then gives a 1 or 0 for whether that word occurs
+in the Description for that row or not, respectively.
 
+A random forest model is a common machine learning algorithm. It is made
+up of multiple decision trees that can be used for classification in
+order to determine what group our observation belongs to. For the
+purpose of this project, we use random forest to determine what
+mood/emotion our description belongs to. The random forest algorithm
+grows multiple trees that are ultimately merged to get a final
+prediction value.
 
 ## METHODS
 
-- code and descriptions
-- Originally tried to use the built in randomForest model, but when I ran that it took over a whole day to run since this project involves term frequency-inverse document frequency (TF-IDF). 
-- Ultimately, I learned about the ranger library. This package is used to build random forests. The reason this one works better is because it uses parallel processing to increase the training speed.
+**Data**: Link to dataset: [Kaggle Emotions Dataset](https://www.kaggle.com/datasets/praveengovi/emotions-dataset-for-nlp/data)
+The dataset includes a column for 'Description' and a column for 'Mood.'
+Kaggle also includes a train.txt file for training the model and a
+test.txt file for testing the model. Kaggle describes the data as a
+collection of documents and its associated emotions.
 
-## Load libraries
+The initial part of this project is to load the libraries, read in the data, and format it. A critical piece is to label each mood with a numeric value from 1-6 in order to generate a numeric prediction from the random forest model. 
+
+Sadness: 1 Anger: 2 Love: 3 Surprise: 4 Fear: 5 Joy: 6
+
+In order to get the data in a usable format, it is necessary to perform some text mining by converting the data to lowercase, removing stop words, removing punctation, etc. Then, using library tm, R should be able to create the TF-IDF matrix. It results in a table that has a column for each word that occurs in the
+description column of the original dataset. It then has a 0 or 1 for whether that row (that observation) has that word in it's description or not.
+
+An important thing to note for this specific project is that the TF-IDF did not work with the random forest model. It came across an error of the variable/column being "incorrect." According to Stack Overflow, a solution to this problem is to change the names of each column and append something like "_c" to the end. 
+
+The next step in this process was to determine the number of trees for
+the random forest model. By default, the number of trees a random forest model uses in R is 500. This can result in a very long runtime especially if you have a large dataset. There are two solutions for this: (1) Use the 'ranger' library which is a fast implementation of random forests. It uses parallel processing to increase the training speed of the model. (2) An additional solution is to test create a sequence of difference values to test for the number of trees and create a plot of accuracy vs. trees. For accuracy, 1-OOB will provide a sufficient estimate. For this specific model, the number of trees used was 150, as the accuracy plateau's out around 120 trees. 
+
+(**Note**: This part takes about 20 minutes to run)
+
+An important measure is out of bag error that is used to estimate the performance of a random forest
+model. Within each tree, the "out of bag" observations are used as the
+test to evaluate the tree. Out of bag means the observations not used
+for that tree. At the end, all the predictions on the out of bag
+observations of the trees are aggregated to give an estimate of the
+performance. In general, you want a small out of bag error because that
+means the model is making accurate predictions. Out of bag error is also
+1-accuracy so 1-OOB gives us the accuracy.
+
+#### Load libraries
 
 ```{r}
 library(tm)
@@ -41,8 +100,7 @@ library(randomForest)
 library(ranger)
 ```
 
-
-## Read in data and adjust 
+#### Read in data and adjust
 
 ```{r}
 mood_data <- read.table("data/train.txt", sep = ";", header = FALSE)
@@ -51,16 +109,14 @@ mood_data$label <- c(1, 2, 3, 4, 5, 6)[match(mood_data$Mood, c('sadness', 'anger
 head(mood_data)
 ```
 
+#### Preprocessing
 
-## Preprocessing
-- Wanted all the descriptions to be lowercase. 
 ```{r}
 mood_data$Description <- tolower(mood_data$Description)
 ```
 
+#### Create TF-IDF
 
-## Create TF-IDF
-- Term frequency-inverse document frequency (TF-IDF) is used to measure the importance of words in a document. This goes through all the words that are seen in the Description column and creates a whole column for each and every word. It then gives a 1 or 0 for whether that word occurs in the Description for that row or not, respectively. 
 ```{r}
 corpus <- Corpus(VectorSource(mood_data$Description))
 corpus <- tm_map(corpus, content_transformer(tolower))
@@ -70,60 +126,68 @@ corpus <- tm_map(corpus, removeWords, stopwords("en"))
 dtm <- DocumentTermMatrix(corpus)
 ```
 
-
-## Convert to df and add in predictor variable
+#### Convert to df and add in dependent variable
 
 ```{r}
 tfidf_df <- as.data.frame(as.matrix(dtm))
 tfidf_df$label <- as.factor(mood_data$label)
 colnames(tfidf_df) <- paste(colnames(tfidf_df), "_c", sep = "")
+head(tfidf_df)
 ```
 
+#### Train Random Forest model for multiple trees
 
-## Train Random Forest model for multiple trees
-# takes 20 minutes to run
-default is 500
-## NOTE TO SELF: talk about the issues with regular random forest (too slow, but this is parallelized)
-```{r}
+```{r, include = FALSE}
 ntree <- seq(10, 150, by = 10)
 oob_predictions <- vector("numeric", length(ntree))
 set.seed(1)
-for(i in 1:length(nt)){
-  rf_model <- ranger::ranger(label_c ~ ., data = tfidf_df, num.trees = nt[i])
+for(i in 1:length(ntree)){
+  rf_model <- ranger::ranger(label_c ~ ., data = tfidf_df, num.trees = ntree[i])
   oob_predictions[i] <- rf_model$prediction.error
-  print(i)
 }
+#oob_predictions
 ```
 
-
-## Plot accuracy
+#### Plot accuracy
 
 ```{r}
 oob_predictions <- 1 - oob_predictions # gives us the accuracy. 
-max(oob_predictions)
-plot(x = ntree, y = oob_predictions, col = "red", type = "l")
+plot(x = ntree, y = oob_predictions, 
+     col = "red", type = "l", main = "Number of trees vs out of bag error",
+     xlab = "Number of trees", ylab = "Accuracy (1-OOB)")
+print("Max Accuracy: ")
+print(max(oob_predictions))
 ```
 
+## EVALUATION
 
-## Train Random Forest model for best ntree
-# ntree = 150
-```{r}
+The next step for this project was to build the model with the right
+number of trees, generate the predictions on the test set, and then
+evaluate the model.
+
+This model uses num.trees = 150 and runs ranger on the TF-IDF dataset where the label (emotion) is the dependent variable being predicted. Once the model is trained, the test dataset needs to be read in and formatted similarly to the training dataset. Once the test data is formatted correctly, the values of the emotions can be predicted using the trained model. Ranger returns multiple predictions per tree so the best solution to combine these values was to choose the most occurring prediction as the overall prediction. 
+
+(**Note**: This part takes about 8 minutes to run)
+
+#### Train Random Forest model for best ntree
+
+```{r, include = FALSE}
 set.seed(1)
-rf_model <- ranger::ranger(label_c ~ ., data = tfidf_df, num.trees = 150)
+rf_model <- ranger::ranger(label_c ~ ., data = tfidf_df, num.trees = 150, 
+                           importance = "permutation", local.importance = TRUE)
+rf_model
 ```
 
-
-## Generate predictions
-- generates multiple predictions, taking most occurring one for the final prediction
+#### Generate predictions on test data
 
 ```{r}
 test_data <- read.table("data/test.txt", sep = ";", header = FALSE)
 colnames(test_data) <- c("Description", "Mood")
 test_data$label <- c(1, 2, 3, 4, 5, 6)[match(test_data$Mood, c('sadness', 'anger', 'love', 'surprise', 'fear', 'joy'))]
-#test_data <- head(test_data, 1)
+head(test_data)
 ```
-- takes 8.5 minutes to run
-```{r}
+
+```{r, include = FALSE}
 final_predictions = c()
 set.seed(1)
 for(description in test_data$Description){
@@ -147,18 +211,20 @@ for(description in test_data$Description){
 }
 ```
 
+#### Predictions as part of test data
+
 ```{r}
 test_data$predictions <- final_predictions
 test_data$predictions <- as.factor(test_data$predictions)
 test_data$label <- as.factor(test_data$label)
-test_data
+head(test_data)
 ```
 
-## EVALUATION, RESULTS, and CONCLUSION
+## RESULTS and CONCLUSION
 
-- code and descriptions
+The final step is to check the accuracy of the model. One method is to generate a confusion matrix to measure the performance of the model. A confusion matrix tells use the number of true positives, true negatives, false positives, and false negatives. The one generated by this model shows that emotions 1 and 2 have the most accurate predictions. It also tells us that the accuracy is approximately 45% which is low, but it makes sense since the model has six different emotions that it is trying to predict. The confusion matrix also shows us that emotion 1 has high sensitivity (true positives) and emotion 6 has high specificity (true negatives). The model does a relatively good job for these two emotions which is something we will explore further. 
 
-## Check model accuracy
+#### Check model accuracy using confusion matrix
 
 ```{r}
 library(caret)
@@ -166,41 +232,74 @@ conf_matrix <- confusionMatrix(test_data$predictions, test_data$label)
 conf_matrix
 ```
 
-## EDA 
-- could explain why accurate for 1 and 6
+#### Check model accuracy using OOB
+
+Since the out of bag error is low at 0.11975, our random forest model
+did well. Out of bag tells us about the performance of our model.
+Something important to note about OOB is that there is research that
+shows that OOB may over- or underestimate if the sample has a large number of
+predictor variables. Here, we have many so this could be an underestimate.
+
 ```{r}
-hist(mood_data$label)
+oob_final <- rf_model$prediction.error
+oob_final
+```
+
+#### Check model importance to see which words are most important
+
+This is something that could be used for further analysis. In a future
+version of a project like this, we could determine which features are
+most important and use those only to build our model. Some features have
+close to 0 importance meaning they contribute almost nothing to the
+structure of the model.
+
+```{r}
+library(tidyverse)
+importance_df <- as.data.frame(importance(rf_model))
+colnames(importance_df) <- "Importance"
+importance_df
+top_100 <- importance_df %>% 
+  arrange(desc(Importance)) %>% 
+  slice_head(n = 100)
+head(top_100)
+```
+
+#### EDA
+
+As mentioned earlier, the sensitivity for emotion 1 was high and the
+specificity for emotion 6 was high. In order to understand the
+distribution of the emotions better, it was important to look at
+histograms and understand the samples. It seems like the sample size for
+emotion 1 and emotion 6 was significantly higher than the sample size
+for the other four emotions. Even though emotion 6 has low sensitivity,
+this could partially explain why these two emotions had better success
+than the others.
+
+```{r}
+hist(mood_data$label, main = "Histogram of Labeled Emotions for Train Data")
 test_data_eda <- read.table("data/test.txt", sep = ";", header = FALSE)
 colnames(test_data_eda) <- c("Description", "Mood")
 test_data_eda$label <- c(1, 2, 3, 4, 5, 6)[match(test_data_eda$Mood, c('sadness', 'anger', 'love', 'surprise', 'fear', 'joy'))]
-hist(test_data_eda$label)
+hist(test_data_eda$label, main = "Histogram of Labeled Emotions for Test Data")
 ```
 
+## Future Opportunities
 
-## Cross Validation
-- already done with separate datasets for training and testing the model. 
+This project ran a random forest on the entire dataset and on every word
+in TF-IDF. Some opportunities for the future of this project would be to
+run it on less words and to try a different model.
 
+#### LDA and Regression
 
-## LDA?? Regression?? 
+There is a concept called Latent Dirichlet Allocation (LDA) which is a statistical model using for unsupervised classification of documents. In LDA, you have a document (like our description column) made up of multiple words and a topic it belongs to (like our emotion/mood column). LDA helps us figure out which topic the document belongs to. In the case of this analysis, it would tell us which emotion/mood our description is related to. This is an interesting approach to this problem and could be a better way to predict the mood of individual responses. In a way, this is similar to TF-IDF but it would help us eliminate even more words and create a better correlation between descriptions and moods. 
 
-```{r}
-lm_model <- lm(label_c ~ ., data = tfidf_df)
-```
+Another approach is to use the TF-IDF that was created but look at the counts of each word that occurs (row) and see which ones occur very little. For example, if a word occurs once in the entire dataset, it most likely will have little to no value on the ultimate prediction of the model. By getting rid of ineffective words, we can reduce our dataset and run a potentially more accurate model. One option for a new model is a multi-linear regression. 
 
+#### References
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+-   [Random Forest Error](https://stackoverflow.com/questions/49588089/error-in-r-error-in-model-frame-defaulttermsreformulateattributestermste)
+-   [Ranger Documentation](https://cran.r-project.org/web/packages/ranger/ranger.pdf)
+-   [TF-IDF Explanation](https://www.capitalone.com/tech/machine-learning/understanding-tf-idf/)
+-   [Random Forest Explanation](https://www.ibm.com/topics/random-forest)
+-   [Out of Bag Error](https://en.wikipedia.org/wiki/Out-of-bag_error)
+-   [LDA](https://towardsdatascience.com/latent-dirichlet-allocation-lda-9d1cd064ffa2)
